@@ -626,19 +626,19 @@ const F=[
 {c:"All Blacks Tour SA",d:"2026-08-07",t:"17:00",h:"Stormers",a:"New Zealand",ch:"SS Rugby 211",v:"DHL Stadium, Cape Town"},
 {c:"All Blacks Tour SA",d:"2026-08-11",t:"17:00",h:"Sharks",a:"New Zealand",ch:"SS Rugby 211",v:"Hollywoodbets Kings Park, Durban"},
 {c:"All Blacks Tour SA",d:"2026-08-15",t:"17:00",h:"Bulls",a:"New Zealand",ch:"SS Rugby 211",v:"Loftus Versfeld, Pretoria"},
-{c:"All Blacks Tour SA",d:"2026-08-22",t:"17:00",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"Ellis Park, Johannesburg"},
+{c:"All Blacks Tour SA",d:"2026-08-22",t:"17:00",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"Ellis Park Stadium, Johannesburg"},
 {c:"All Blacks Tour SA",d:"2026-08-25",t:"17:00",h:"Lions",a:"New Zealand",ch:"SS Rugby 211",v:"Ellis Park, Johannesburg"},
-{c:"All Blacks Tour SA",d:"2026-08-29",t:"20:00",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"Cape Town Stadium, Cape Town"},
+{c:"All Blacks Tour SA",d:"2026-08-29",t:"17:00",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"DHL Stadium, Cape Town"},
 {c:"All Blacks Tour SA",d:"2026-09-05",t:"TBC",h:"Springbok Women",a:"Black Ferns",ch:"SS Rugby 211",v:"FNB Stadium, Johannesburg"},
-{c:"All Blacks Tour SA",d:"2026-09-05",t:"17:05",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"FNB Stadium, Johannesburg"},
-{c:"All Blacks Tour SA",d:"2026-09-12",t:"TBC",h:"New Zealand",a:"South Africa",ch:"SS Rugby 211",v:"M&T Bank Stadium, Baltimore, USA"},
+{c:"All Blacks Tour SA",d:"2026-09-05",t:"17:00",h:"South Africa",a:"New Zealand",ch:"SS Rugby 211",v:"FNB Stadium, Johannesburg"},
+{c:"All Blacks Tour SA",d:"2026-09-12",t:"17:05",h:"New Zealand",a:"South Africa",ch:"SS Rugby 211",v:"M&T Bank Stadium, Baltimore, USA"},
 
 // ══════════════════════════════════════════════════════════
 // SOUTH AFRICA vs AUSTRALIA — Sep 2026
 // Source: sarugbymag.co.za (SuperSport not yet listed)
 // SS Rugby 211
 // ══════════════════════════════════════════════════════════
-{c:"International Rugby",d:"2026-09-27",t:"TBC",h:"Australia",a:"South Africa",ch:"SS Rugby 211",v:"Optus Stadium, Perth"},
+{c:"International Rugby",d:"2026-09-27",t:"11:45",h:"Australia",a:"South Africa",ch:"SS Rugby 211",v:"Optus Stadium, Perth"},
 
 // ══════════════════════════════════════════════════════════
 // CURRIE CUP 2026
@@ -672,6 +672,14 @@ const F=[
 // ══════════════════════════════════════════════════════════
 {c:"Bok Women / WXV",d:"2026-09-18",t:"TBC",h:"Wales Women",a:"South Africa Women",ch:"SS Variety 3 208",v:"Cardiff Arms Park"},
 {c:"Bok Women / WXV",d:"2026-09-27",t:"TBC",h:"Australia Women",a:"Springbok Women",ch:"SS Variety 3 208",v:"TBC, Australia"},
+
+// ── ADDITIONAL INTERNATIONAL RUGBY (from SuperSport International Rugby page) ──
+// All times SuperSport UTC + 2 = SAST
+{c:"International Rugby",d:"2026-08-29",t:"21:00",h:"Argentina",a:"Australia",ch:"SS Rugby 211",v:"Estadio 23 de Agosto, San Salvador de Jujuy"},
+{c:"International Rugby",d:"2026-09-05",t:"07:50",h:"Japan",a:"Canada",ch:"SS Rugby 211",v:"Denka Big Swan Stadium, Niigata"},
+{c:"International Rugby",d:"2026-09-05",t:"21:00",h:"Argentina",a:"Australia",ch:"SS Rugby 211",v:"Estadio Malvinas Argentinas, Mendoza"},
+{c:"International Rugby",d:"2026-10-10",t:"08:10",h:"New Zealand",a:"Australia",ch:"SS Rugby 211",v:"Eden Park, Auckland"},
+{c:"International Rugby",d:"2026-10-17",t:"07:00",h:"Australia",a:"New Zealand",ch:"SS Rugby 211",v:"Stadium Australia, Sydney"},
 
 ];
 
@@ -1059,37 +1067,98 @@ function render(list){
     return;
   }
 
-  // Group by competition, then by date within competition
-  const compOrder = [];
-  const compGroups = {};
-  list.forEach(f=>{
-    if(!compGroups[f.c]){ compGroups[f.c]=[]; compOrder.push(f.c); }
-    compGroups[f.c].push(f);
-  });
+  const compQ=document.getElementById('compFilter').value;
 
-  let h='';
-  compOrder.forEach(comp=>{
-    const items = compGroups[comp];
-    const isCollapsed = collapsedComps.has(comp);
-    h += `<div class="comp-group ${isCollapsed?'collapsed':''}">
-      <div class="comp-toggle" data-comp="${compAccent(comp)}" onclick="toggleComp('${comp.replace(/'/g,"\\'")}')">
-        <span class="ct-name">${esc(comp)}</span>
-        <span class="ct-count">${items.length}</span>
-        <span class="ct-arrow">▾</span>
-      </div>
-      <div class="comp-body">`;
+  if(compQ){
+    // ── COMPETITION SELECTED → grouped view with collapsible header ──
+    const compGroups={};
+    list.forEach(f=>{
+      if(!compGroups[f.c]) compGroups[f.c]=[];
+      compGroups[f.c].push(f);
+    });
+    Object.keys(compGroups).forEach(c=>{
+      compGroups[c].sort((a,b)=>(a.d+(a.t==='TBC'?'99:99':a.t)).localeCompare(b.d+(b.t==='TBC'?'99:99':b.t)));
+    });
+    const compOrder=Object.keys(compGroups).sort((a,b)=>{
+      const af=compGroups[a][0].d+(compGroups[a][0].t==='TBC'?'99:99':compGroups[a][0].t);
+      const bf=compGroups[b][0].d+(compGroups[b][0].t==='TBC'?'99:99':compGroups[b][0].t);
+      return af.localeCompare(bf);
+    });
 
-    const dateGroups = {};
-    const dateOrder = [];
-    items.forEach(f=>{
-      if(!dateGroups[f.d]){ dateGroups[f.d]=[]; dateOrder.push(f.d); }
+    let h='';
+    compOrder.forEach(comp=>{
+      const items=compGroups[comp];
+      const isCollapsed=collapsedComps.has(comp);
+      h+=`<div class="comp-group ${isCollapsed?'collapsed':''}">
+        <div class="comp-toggle" data-comp="${compAccent(comp)}" onclick="toggleComp('${comp.replace(/'/g,"\\'")}')">
+          <span class="ct-name">${esc(comp)}</span>
+          <span class="ct-count">${items.length}</span>
+          <span class="ct-arrow">▾</span>
+        </div>
+        <div class="comp-body">`;
+      const dateGroups={};const dateOrder=[];
+      items.forEach(f=>{
+        if(!dateGroups[f.d]){dateGroups[f.d]=[];dateOrder.push(f.d);}
+        dateGroups[f.d].push(f);
+      });
+      dateOrder.sort();
+      dateOrder.forEach(date=>{
+        dateGroups[date].sort((a,b)=>(a.t==='TBC'?'99:99':a.t).localeCompare(b.t==='TBC'?'99:99':b.t));
+        const st=dStatus(date);
+        h+=`<div class="date-sub">${esc(fmtLbl(date))}</div>`;
+        dateGroups[date].forEach(f=>{
+          const cc=st==='today'?'today-c':'future';
+          const ts=f.t&&f.t!=='TBC'?f.t+' SAST':'Time TBC';
+          const live=st==='today'?`<span class="badge b-live">● LIVE TODAY</span>`:'';
+          const ven=f.v?`<span class="badge b-ven">📍 ${esc(f.v)}</span>`:'';
+          h+=`<div class="card ${cc}">
+            <div class="card-comp">${esc(f.c)}</div>
+            <div class="card-row">
+              <div class="card-teams">${teamDisplay(f.h)}<span class="vs">vs</span>${teamDisplay(f.a)}</div>
+            </div>
+            <div class="card-meta">
+              <span class="badge b-time">⏱ ${ts}</span>
+              <span class="badge b-ch">📺 ${esc(f.ch)}</span>
+              ${live}${ven}
+            </div>
+          </div>`;
+        });
+      });
+      h+=`</div></div>`;
+    });
+    main.innerHTML=h;
+
+  } else {
+    // ── NO COMPETITION SELECTED → flat list sorted by date then time ──
+    // Sort all fixtures: date first, then time (TBC goes to end of day)
+    const sorted=[...list].sort((a,b)=>{
+      const at=a.d+(a.t==='TBC'?'99:99':a.t);
+      const bt=b.d+(b.t==='TBC'?'99:99':b.t);
+      return at.localeCompare(bt);
+    });
+
+    // Group into date sections — dateOrder is built from already-sorted list
+    // then explicitly sorted again to guarantee correct order
+    const dateGroups={};const dateOrder=[];
+    sorted.forEach(f=>{
+      if(!dateGroups[f.d]){dateGroups[f.d]=[];dateOrder.push(f.d);}
       dateGroups[f.d].push(f);
     });
+    // Sort dates explicitly (YYYY-MM-DD string sort = chronological)
     dateOrder.sort();
+    // Sort fixtures within each date by time
+    Object.keys(dateGroups).forEach(d=>{
+      dateGroups[d].sort((a,b)=>{
+        const at=a.t==='TBC'?'99:99':a.t;
+        const bt=b.t==='TBC'?'99:99':b.t;
+        return at.localeCompare(bt);
+      });
+    });
 
+    let h='';
     dateOrder.forEach(date=>{
       const st=dStatus(date);
-      h+=`<div class="date-sub">${esc(fmtLbl(date))}</div>`;
+      h+=`<div class="date-section"><div class="date-lbl">${esc(fmtLbl(date))}</div>`;
       dateGroups[date].forEach(f=>{
         const cc=st==='today'?'today-c':'future';
         const ts=f.t&&f.t!=='TBC'?f.t+' SAST':'Time TBC';
@@ -1107,12 +1176,10 @@ function render(list){
           </div>
         </div>`;
       });
+      h+=`</div>`;
     });
-
-    h += `</div></div>`;
-  });
-
-  main.innerHTML=h;
+    main.innerHTML=h;
+  }
 }
 
 applyFs();
