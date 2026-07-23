@@ -1,9 +1,9 @@
-// Rugby 2026 — Service Worker
-// Cache-first strategy for the app shell.
-// Does NOT touch localStorage — all fixture data and user
-// preferences stored there are completely unaffected.
+// Rugby 2026 — Service Worker v2
+// Network-first strategy: always fetches fresh content from GitHub,
+// falls back to cache only when offline. This ensures updates you
+// upload to GitHub appear immediately without needing to clear cache.
 
-const CACHE_NAME = 'rugby2026-v1';
+const CACHE_NAME = 'rugby2026-v2';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -19,7 +19,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean up any old caches from previous versions
+// Activate: delete ALL old caches so stale content is never served
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -33,33 +33,31 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: cache-first, fall back to network
+// Fetch: NETWORK-FIRST — always try network, cache is only offline fallback
 self.addEventListener('fetch', event => {
-  // Only handle GET requests for our own origin
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // Cache valid responses for our app shell files
-        if (
-          response &&
-          response.status === 200 &&
-          response.type === 'basic'
-        ) {
+    fetch(event.request)
+      .then(response => {
+        // Got fresh response from network — update the cache and return it
+        if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache =>
             cache.put(event.request, clone)
           );
         }
         return response;
-      });
-    }).catch(() => {
-      // Offline fallback — serve cached index.html for navigation requests
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
-    })
+      })
+      .catch(() => {
+        // Network failed (offline) — serve from cache
+        return caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          // Final fallback for navigation requests
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+        });
+      })
   );
 });
