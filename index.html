@@ -693,7 +693,14 @@ const F=[
 // UTILITIES
 // ═══════════════════════════════════════════════
 const TODAY=new Date();TODAY.setHours(0,0,0,0);
-const TODAYSTR=TODAY.toISOString().slice(0,10);
+// Use local date string (not toISOString which is UTC) to avoid SAST offset issues
+const TODAYSTR=(()=>{
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+})();
 
 function pDate(d){const[y,m,dd]=d.split('-').map(Number);const dt=new Date(y,m-1,dd);dt.setHours(0,0,0,0);return dt}
 function dStatus(d){const dt=pDate(d);const diff=(dt-TODAY)/86400000;if(diff<0)return'past';if(diff===0)return'today';return'future'}
